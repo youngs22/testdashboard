@@ -5,8 +5,6 @@ website:
   title: "TEST DASHBOARD"
   navbar:
     left:
-      - href: about.qmd
-        text: Home
       - href: index.qmd
         text: Dashboard
 
