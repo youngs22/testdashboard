@@ -1,41 +1,30 @@
---- 
-title: "Development Indicators by Continent"
-author: "Gapminder Analytics Group"
-format: dashboard
---- 
+---
+title: "project_1조"
+author: "Youna Park"
+format: 
+  dashboard:
+    scrolling: true 
+---
 
 ```{python}
+import pandas as pd
 import plotly.express as px
-df = px.data.gapminder()
-```
 
-## Row {height=60%}
+major = pd.read_csv('C:/Users/USER/Documents/LS빅데이터스쿨/LsBigdata-project1/data/Majors Awarded_2022.csv')
 
-```{python}
-#| title: GDP and Life Expectancy 
-px.scatter(  
-  df, x="gdpPercap", y="lifeExp", 
-  animation_frame="year", animation_group="country", 
-  size="pop", color="continent", hover_name="country",
-  facet_col="continent", log_x=True, size_max=45, 
-  range_x=[100,100000], range_y=[25,90] 
-)  
-```
+major["Completions"] = major["Completions"].astype(int)
 
-## Row {height=40%}
 
-```{python}
-#| title: Population
-px.area(
-  df, x="year", y="pop", 
-  color="continent", line_group="country"
+fig = px.treemap(major,
+                 path=[px.Constant('All Majors'), 'CIP2', 'CIP4'], 
+                 values='Completions',
+                 color='CIP2',  
+                 hover_data=['Completions'], 
+                 color_discrete_sequence=  px.colors.qualitative.Pastel  +  px.colors.qualitative.Pastel2 + px.colors.qualitative.Set3
+                )
+
+fig.update_traces(
+    textfont=dict(size=12)  # 폰트 크기 조정 (원하는 크기로 조정 가능)
 )
-```
 
-```{python}
-#| title: Life Expectancy
-px.line(
-  df, x="year", y="lifeExp", 
-  color="continent", line_group="country"
-)
 ```

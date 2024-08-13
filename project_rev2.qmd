@@ -1,0 +1,413 @@
+---
+title: "무적 1조 아자아자 화이팅"
+author: "최강 1조"
+format: 
+  dashboard:
+    scrolling: true
+    logo: "C:/Users/USER/Documents/LS빅데이터스쿨/testdashboard/houseprice_logo.png"
+freeze: true
+---
+
+# Features
+
+```{python}
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+df =pd.read_csv('C:/Users/USER/Documents/LS빅데이터스쿨/testdashboard/houseprice-with-lonlat.csv')
+house_train=pd.read_csv("C:/Users/USER/Documents/LS빅데이터스쿨/LsBigdata-project1/data/houseprice/train.csv")
+```
+
+```{python}
+#| output: false
+bins=np.array([1870,1879,1889,1899,1909,1919,1929,1939,
+               1949,1959,1969,1979,1989,1999,2009,2019])
+df['Years']=pd.cut(df['Year_Built'], bins,
+                       labels=(np.arange(187,202)*10).astype(int))
+
+years_roof = df.groupby(['Years','Roof_Style'])\
+               .agg(count_roof=('Roof_Style', 'count'))\
+               .reset_index()
+
+fig1 = px.bar(
+    years_roof,
+    x='Years',
+    y='count_roof',
+    color='Roof_Style',
+    title='Roof Styles over Years',
+    labels={'Roof_Style': 'Roof Style', 'count_roof': 'Count'},
+    barmode='stack'
+)
+
+```
+
+```{python}
+#| output: false
+years_ext = df.groupby(['Years','Exterior_1st'])\
+               .agg(count_ext=('Exterior_1st', 'count'))\
+               .reset_index()
+
+fig2 = px.bar(
+    years_ext,
+    x='Exterior_1st',
+    y='count_ext',
+    animation_frame='Years',
+    title='Exterior over Years',
+    color="Exterior_1st",
+    labels={'Exterior_1st': 'Exterior', 'count_ext': 'Count'}
+)
+
+```
+
+```{python}
+#| output: false
+fig3 = px.scatter(
+    house_train,
+    x="GrLivArea",
+    y="SalePrice",
+    color="Neighborhood",
+    trendline = 'ols',
+    size_max=1 # 점의 최대 크기 설정
+)
+
+# 레이아웃 업데이트
+fig3.update_layout(
+    width = 1000,
+    height = 700,
+    title=dict(text="지상생활면적에 따른 집 가격", font=dict(size=24)),
+    xaxis=dict(
+        title=dict(text="지상생활면적 (sqft)", font=dict(size=18)), 
+        tickfont=dict(size=14),
+        gridcolor='rgba(255, 255, 255, 0.2)'
+    ),
+    yaxis=dict(
+        title=dict(text="집 가격 ($)", font=dict(size=18)), 
+        tickfont=dict(size=14),
+        gridcolor='rgba(255, 255, 255, 0.2)'
+    ),
+    legend_title=dict(text='에임스 시내 위치', font=dict(size=18)),
+    legend=dict(font=dict(size=14)),
+)
+```
+
+```{python}
+#| output: false
+import folium
+from folium import IFrame
+import plotly.express as px
+
+# Ames 지도 생성
+map_ames = folium.Map(
+    location=[42.03, -93.64289689856655],
+    zoom_start=12, 
+    tiles='cartodbpositron'
+)
+
+# 색상 목록 정의
+colors = ['blue', 'green', 'red', 'purple', 'orange', 'darkred', 'darkblue', 'darkgreen', 
+          'pink', 'lightblue', 'lightgreen']
+
+# Neighborhood별로 산점도 생성 및 HTML 변환
+for idx, neighborhood in enumerate(df['Neighborhood'].unique()):
+    # 해당 Neighborhood 데이터 추출
+    df_neigh = df.query('Neighborhood == @neighborhood')
+    
+    # scatter plot 생성
+    fig = px.scatter(
+        df_neigh,
+        x='Gr_Liv_Area',
+        y='Sale_Price',
+        title=f'{neighborhood} - GrLivArea vs SalePrice',
+        labels={'Gr_Liv_Area': 'Living Area', 'Sale_Price': 'Sale Price'},
+        trendline='ols'
+    )
+    
+    # 회귀 직선의 색상 변경
+    fig.update_traces(line=dict(color='red', width=2), selector=dict(mode='lines'))
+
+    # 그래프를 HTML로 변환
+    html = fig.to_html(include_plotlyjs='cdn')
+    
+    # Folium 팝업을 위한 IFrame 생성
+    iframe = IFrame(html, width=600, height=400)
+    popup = folium.Popup(iframe, max_width=600)
+    
+    # 각 Neighborhood의 중심 좌표 계산 (여기서는 평균 좌표 사용)
+    lat = df_neigh['Latitude'].mean()
+    lon = df_neigh['Longitude'].mean()
+    
+    # 마커 색상 결정
+    color = colors[idx % len(colors)]  # 색상을 순환해서 사용
+    
+    # Folium 마커 추가 (지도를 덮어 쓰지 않고, 계속해서 마커를 추가함)
+    folium.Marker(
+        location=[lat, lon],
+        popup=popup,
+        icon=folium.Icon(color=color, icon='info-sign')
+    ).add_to(map_ames)
+
+# 지도를 반환하여 표시 (반복 생성하지 않음)
+```
+
+![](./image/scenery.png)
+
+## Row {height="20%"}
+
+###  {width="40%"}
+
+![](./image/roof.jfif)
+
+###  {width="60%"}
+
+```{python}
+#| title: Roof Styles over Years
+fig1.show()
+```
+
+## Row {height="20%"}
+
+###  {width="30%"}
+
+![](./image/exterior1.png)
+
+###  {width="70%"}
+
+```{python}
+#| title: Exterior over Years
+fig2.show()
+```
+
+## Row {.tabset}
+
+```{python}
+#| title: 지상생활면적에 따른 집 가격
+fig3.show()
+```
+
+```{python}
+#| title: 에임스 시내 위치에 따른 지상생활면적 vs. 집 가격
+map_ames
+```
+
+# Education
+## Row
+```{python}
+#| output: false
+import pandas as pd
+import plotly.express as px
+
+major = pd.read_csv('C:/Users/USER/Documents/LS빅데이터스쿨/testdashboard/Majors Awarded.csv')
+
+major["Completions"] = major["Completions"].astype(int)
+
+
+fig = px.treemap(major,
+                 path=[px.Constant('All Majors'), 'CIP2', 'CIP4'], 
+                 values='Completions',
+                 color='CIP2',  
+                 hover_data=['Completions'], 
+                 color_discrete_sequence=   px.colors.qualitative.Pastel2 + px.colors.qualitative.Set3 + px.colors.qualitative.Pastel
+                )
+
+# 선택/해제 가능한 항목의 설정
+fig.update_layout(
+    clickmode='event+select',  # 클릭 시 이벤트와 선택 모드 활성화
+    dragmode='select'   # 드래그 모드 설정
+)
+```
+###  {width="50%"}
+```{python}
+#| title: Major Preference
+fig.show()
+```
+
+```{python}
+#| output: false
+import pandas as pd
+import plotly.express as px
+
+# 데이터 불러오기
+major = pd.read_csv('C:/Users/USER/Documents/LS빅데이터스쿨/LsBigdata-project1/data/Majors Awarded_2022.csv')
+
+# 데이터 전처리
+major["Completions"] = major["Completions"].astype(int)
+              
+major = major.sort_values(by="Year", ascending=True)
+
+# 애니메이션 막대 그래프 그리기
+fig_major = px.bar(major,
+             x="CIP2",
+             y= "Completions",
+             color="CIP4",          # 색상으로 중그룹(CIP4)을 설정하여 누적 표시
+             animation_frame="Year", # 연도를 애니메이션 프레임으로 설정
+             title="Yearly Major Groups with Sub-Groups",
+             labels={"Completions": "Number of Completions"},
+             height=600,
+             width=900)
+
+# 레이아웃 업데이트
+fig_major.update_layout(
+    barmode='stack',   
+    xaxis_title="전공 중분류",  # X축 제목
+    autosize=True,                  # 그래프 크기 자동 조정
+    xaxis=dict(tickangle=30)       # X축 레이블 기울이기
+)
+```
+###  {width="50%"}
+```{python}
+#| title: 연도별 전공 순위
+fig_major.show()
+```
+
+## Row 
+###  {width="50%"}
+```{python}
+#| output: false
+
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.express as px
+
+
+job = pd.read_csv('C:/Users/USER/Documents/LS빅데이터스쿨/testdashboard/Common Jobs by Major.csv')
+
+job["Detailed Occupation"] = job["Detailed Occupation"].replace(
+    "Miscellaneous engineers, including nuclear engineers", 
+    "Miscellaneous engineers"
+)
+
+job_2022 = job.query("Year==2022")
+
+fig_px = px.bar(
+    job_2022, 
+    x='Detailed Occupation', 
+    y='Total Population', 
+    color='CIP2',
+)
+```
+
+```{python}
+#| title: 직업별 전공
+fig_px.show()
+```
+
+
+```{python}
+#| output: false
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.express as px
+
+
+job = pd.read_csv('C:/Users/USER/Documents/LS빅데이터스쿨/testdashboard/Common Jobs by Major.csv')
+
+job["Detailed Occupation"] = job["Detailed Occupation"].replace(
+    "Miscellaneous engineers, including nuclear engineers", 
+    "Miscellaneous engineers"
+)
+
+fig_subplot = make_subplots(
+    rows=4, cols=2,
+    specs=[[{'colspan': 2, 'rowspan': 2}, None],
+           [None, None],
+           [{}, {}],
+           [{}, {}]],
+    subplot_titles=("2022","2021","2020","2019","2018")
+)
+
+job_2022 = job.query("Year==2022")\
+              .sort_values(by="Total Population", ascending=False)\
+              .head(5)
+              
+job_2021 = job.query("Year==2021")\
+              .groupby("Detailed Occupation", as_index=False)\
+              .agg({"Total Population": "sum"})\
+              .sort_values(by="Total Population", ascending=False)\
+              .head(5)
+              
+job_2020 = job.query("Year==2020")\
+              .groupby("Detailed Occupation", as_index=False)\
+              .agg({"Total Population": "sum"})\
+              .sort_values(by="Total Population", ascending=False)\
+              .head(5)
+              
+job_2019 = job.query("Year==2019")\
+              .groupby("Detailed Occupation", as_index=False)\
+              .agg({"Total Population": "sum"})\
+              .sort_values(by="Total Population", ascending=False)\
+              .head(5)
+              
+job_2018 = job.query("Year==2018")\
+              .groupby("Detailed Occupation", as_index=False)\
+              .agg({"Total Population": "sum"})\
+              .sort_values(by="Total Population", ascending=False)\
+              .head(5)
+
+fig_subplot.add_trace(
+    go.Bar(
+        x=job_2022["Detailed Occupation"],
+        y=job_2022["Total Population"],
+        name="2022"
+        ), 
+    row=1, col=1
+)
+
+
+fig_subplot.add_trace(
+    go.Bar(
+        x=job_2021["Detailed Occupation"],
+        y=job_2021["Total Population"],
+        name="2021"
+        ), 
+    row=3, col=1
+)
+
+
+
+fig_subplot.add_trace(
+    go.Bar(
+        x=job_2020["Detailed Occupation"],
+        y=job_2020["Total Population"],
+        name="2020"
+        ), 
+    row=3, col=2
+)
+
+fig_subplot.add_trace(
+    go.Bar(
+        x=job_2019["Detailed Occupation"],
+        y=job_2019["Total Population"],
+        name="2019"
+        ), 
+        
+    row=4, col=1
+)
+
+fig_subplot.add_trace(
+    go.Bar(
+        x=job_2018["Detailed Occupation"],
+        y=job_2018["Total Population"],
+        name="2018"
+        ), 
+        
+    row=4, col=2
+)
+
+# x축 레이블 기울이기
+fig_subplot.update_xaxes(tickangle=15, row=3, col=1)
+fig_subplot.update_xaxes(tickangle=15, row=3, col=2)
+fig_subplot.update_xaxes(tickangle=15, row=4, col=1)
+fig_subplot.update_xaxes(tickangle=15, row=4, col=2)
+
+```
+
+###  {width="50%"}
+```{python}
+#| title: 연도별 직업 선호도
+fig_subplot.show()
+```
+
